@@ -67,9 +67,7 @@ def task_file():
     if not os.path.exists("tasks.txt"):
         with open("tasks.txt", "w", encoding="utf-8") as default_task_file:
             #default_task_file.write("Task List")
-            default_task_file.write("admin;first task;fix deletion of file if task not added;2024-03-14;2024-02-21;No")
-            #User;Task;Task Description;Due Date;Assigned Date;Completed:
-            #decclan;first task;fix deletion of file if task not added;2024-03-14;2024-02-21;No
+            default_task_file.write("admin;no-file;this is a default task file;2024-03-14;2024-02-21;No")
 
     with open("tasks.txt", 'r', encoding="utf-8") as task_file:
         task_data = task_file.read().split("\n")
@@ -91,7 +89,6 @@ def task_file():
 
     return task_list
     # if deleted/file empty index error occurs
-
 #===================================================================================================
 
 def user_log_in():
@@ -130,8 +127,9 @@ def user_log_in():
             print("Wrong password")
             continue
         else:
-            print("Login Successful!")
+            print("\nLogin Successful!")
             logged_in = True
+            # [0] for curr_user [1] for all users
             return curr_user, all_users_dict
 #===================================================================================================
 
@@ -162,7 +160,6 @@ def reg_user(original_user_dict):
                             new_user_data.append(f"{k};{original_user_dict[k]}")
                         out_file.write("\n".join(new_user_data))
                     break
-
                 # - Otherwise you present a relevant message and rerun if attempt fails.
                 else:
                     print("Passwords do no match.")
@@ -173,7 +170,7 @@ def reg_user(original_user_dict):
 #===================================================================================================
 
 def add_task(username_password, main_task_list):
-    '''Allow a user to add a new task to task.txt file
+    '''Allow a user to add a new task.
         Prompt a user for the following: 
         - A username of the person whom the task is assigned to,
         - A title of a task,
@@ -189,8 +186,8 @@ def add_task(username_password, main_task_list):
 
     while True:
         try:
+            # Assign to user if they exist
             task_username = word_input("Name of person assigned to task: ")
-
             if task_username not in username_password.keys():
                 print("User does not exist. Please enter a valid username")
 
@@ -199,7 +196,6 @@ def add_task(username_password, main_task_list):
                 task_description = word_input("Description of Task: ")
 
                 task_due_date = input("Due date of task (YYYY-MM-DD): ")
-                print(curr_date)
 
                 due_date_time = datetime.strptime(task_due_date, DATETIME_STRING_FORMAT)
                 # Due date validation
@@ -210,22 +206,21 @@ def add_task(username_password, main_task_list):
 
         except ValueError:
             print("Invalid datetime format. Please use the format specified")
-
-    ''' Add the data to the file task.txt and
-        Include 'No' to indicate if the task is complete.'''
+    # New task dict data format
     new_task = {
         "username": task_username,
         "title": task_title,
         "description": task_description,
         "due_date": due_date_time, #due_date_time, adds 00:00:00 time stamp try string_date,
         "assigned_date": curr_date,
-        "completed": False
+        "completed": False # No
     }
+    # Adds to tasks.txt file function
     add_task_to_file(main_task_list, new_task)
 #===================================================================================================
 
 def add_task_to_file(main_task_list, task):
-    """Add task to main list of tasks"""
+    """Add task to main list of tasks in tasks.txt"""
     try:
         if task not in main_task_list:
             main_task_list.append(task)
@@ -242,7 +237,7 @@ def add_task_to_file(main_task_list, task):
                 ]
                 task_list_to_write.append(";".join(str_attrs))
             add_task_file.write("\n".join(task_list_to_write))
-        print("Task successfully added.")
+        print("Task successfully added to file.")
     except ValueError:
         print("Unable to add task")
 #===================================================================================================
@@ -265,47 +260,70 @@ def edit_task(original_task_list, curr_user):
             display_index = [index for index in range(len(this_user_tasks) + 1)]
             # Remove the 0 from start
             display_index.pop(0)
-            # Build a table for display only
+            # Build a table of all curr_user tasks for display only
             table = tabulate(this_user_tasks, showindex=display_index)
             print(table)
 
-            # Ask the user to select a dictionary by index
-            index_to_edit = int(input("Enter the index of the dictionary to edit (1 to {}) or -1 to exit: ".format(len(this_user_tasks))))
+            # Ask the user to select a task dictionary by index
+            index_to_edit = int(input(f"Enter the index of the dictionary to edit (1 to {len(this_user_tasks)}) or -1 to exit: "))
 
             if index_to_edit == -1:
                 print("Returned to main menu.")
                 return
-            # Ensure the index is valid
+            # Ask user if selected task is complete
+            task_completed = input("Has this task been completed? y/n\n").lower()
+            # Ensure the index is valid/in range
             if 1 <= index_to_edit <= len(this_user_tasks):
                 selected_dict = this_user_tasks[index_to_edit - 1]
-                print("\nSelected dictionary:\n", selected_dict)
-
-                # Allow the user to edit the selected dictionary
-                key_to_edit = input("Enter the key to edit: ")
-                new_value = input(f"Enter the new value for key '{key_to_edit}': ")
-
-                #if key_to_edit == selected_dict.keys():
-                for key_in_dict in selected_dict.keys():
-                    if key_to_edit == key_in_dict:
-                        selected_dict[key_to_edit] = new_value
-                        print("Successfully updated the task.")
-                    else:
-                        print("\nUnable to add task. Please check spelling and try again.")
-
-                print("Dictionary updated:", selected_dict)
-                add_task_to_file(original_task_list, selected_dict)
-                return
+                # Create tabulate object of this task for print/display only
+                # Iterable inside list
+                # Prompt user if this task has been completed
             else:
                 print("Invalid index. Please enter a valid index.")
 
+            if task_completed == "y":
+                selected_dict['completed'] = True
+                # Call write to file function with new values
+                add_task_to_file(original_task_list, selected_dict)
+                print(f"\nCongratulations on completing task '{index_to_edit}'.\n{tabulate([selected_dict])}")
+                # Cant edit further once completed
+                return
+            elif task_completed == "n":
+                # Change back to false if previously changed to true
+                selected_dict['completed'] = False
+                print(tabulate([selected_dict]))
+
+                # Option for user to assign task to another user - needs due date functionality
+                change_user_assigned = input("Would you like to assign this task to another user? y/n\n").lower()
+                change_due_date = input("Would you like to change this tasks due date? y/n\n").lower()
+                if change_user_assigned == "y":
+                    key_to_edit = 'username'
+                    new_value = input(f"Enter the new user to assign task '{index_to_edit}' to: ")
+
+                    for key_in_dict in selected_dict.keys():
+                        if key_to_edit == key_in_dict:
+                            selected_dict[key_to_edit] = new_value
+                            print(f"Successfully assigned the task to {new_value}.")
+
+                    print(f"\nDictionary updated:\n{tabulate([selected_dict])}")
+                    add_task_to_file(original_task_list, selected_dict)
+                    return # Redundant?
+                elif change_user_assigned == "n":
+                    print(f"\nYou remain assigned to this task. Dictionary updated:\n{tabulate([selected_dict])}")
+                    add_task_to_file(original_task_list, selected_dict)
+                    break # Redundant?
+                else:
+                    print("Invalid option. Changes have not been saved.")
+            else:
+                print("Invalid option. Changes have not been saved.")
         except ValueError:
-            print("Invalid input. Please enter a valid integer.")
+            print("Invalid input. Please try again.")
 #===================================================================================================
 
 def view_all(all_tasks):
     '''Reads all tasks from task.txt file and prints to the console
     '''
-    if all_tasks == "":
+    if all_tasks == "": # If task adding crashes, all tasks data is lost
         print("No current tasks.")
     print(tabulate(all_tasks))
 #===================================================================================================
@@ -314,26 +332,20 @@ def view_mine(all_tasks, curr_user):
     '''Reads user tasks from task.txt file and prints to the console
     offers option to edit specific task by number and dictionary key
     '''
-    if all_tasks == "":
+    if all_tasks == "": # If task adding crashes, all tasks data is lost
         print("No current tasks.")
     edit_task(all_tasks, curr_user)
 #===================================================================================================
 
 def user_menu():
     """Main menu of choices for user"""
-    # 
-    main_log_in = user_log_in() #"decclan"
-    #username_password = #"Yellowlemons$1"
+    # Main log in
+    main_log_in = user_log_in() # returns curr_user [0] dict of all users [1]
     curr_user = main_log_in[0]
     all_users_dict = main_log_in[1]
-
-    #prints all username passwords dictionary
-    print("curr_user is:\n")
-    print(all_users_dict)
-    print(curr_user)
-
+    # Read or create list of dictionaries for all tasks from tasks.txt
     curr_tasks = task_file()
-
+    # Main loop
     while True:
         # presenting the menu to the user and
         # making sure that the user input is converted to lower case.
@@ -379,4 +391,5 @@ def user_menu():
         else:
             print("You have made a wrong choice, Please Try again")
 #===================================================================================================
+
 user_menu()
