@@ -8,58 +8,88 @@
 """=========importing libraries========="""
 import os
 import re
-from datetime import datetime, date
+from datetime import date
 from tabulate import tabulate
 
-DATETIME_STRING_FORMAT = "%Y-%m-%d"
+def date_from_string(string_date):
+    """"Returns date object from string"""
+    try:
+        string_date = string_date.split("-")
+        string_date = list(map(lambda x: int(x), string_date))
+        # Creates date object from string
+        date_object = date(string_date[0], string_date[1], string_date[2])
+        return date_object
+    except ValueError:
+        print("Date is invalid.")
 
-"""Input Validation functions"""
-
-def word_input(prompt):
-    """Word or sentence validation"""
+def valid_due_date():
+    """Prompts user input due date string
+    Compares to todays date
+    Returns valid due date object"""
     while True:
-        word = input(prompt)
-        # Regex check for basic sentence characters.
-        invalid_word = re.search("[^A-Za-z0-9 ,.$£:;*#+%=!\-]+",word)
-        # You have to escape the minus sign using backslash.
-        # var alphaExp = /^[a-zA-ZåäöÅÄÖ\s\-]+$/;
-        # To stop them from using it in the beginning or the end, try something like this:
-        # var alphaExp = /^[a-zA-ZåäöÅÄÖ\s]+[a-zA-ZåäöÅÄÖ\s\-]*[a-zA-ZåäöÅÄÖ\s]+$/;
+        try:
+            input_date = input("Please enter a due date in the format yyyy-mm-dd: ") 
+            date_pattern = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+            if date_pattern.match(input_date):
+                input_date = input_date.split("-")
+                input_date = list(map(lambda x: int(x), input_date))
+                # Creates date object from string for comparison
+                input_date = date(input_date[0], input_date[1], input_date[2])
 
-        if invalid_word:
-            print("Only special characters , . $ £ : ; * # + % = ! - will be accepted.")
-        # If empty
-        elif word == "":
-            print("Please enter a value.")
-        else:
-            # Remove trailing whitespace
-            word = word.strip()
-            # If only whitespace was entered
-            if word == "":
-                word = "null"
-            return word
+                if input_date < date.today():
+                    print("Sorry, this date has passed.")
+                else:
+                    print(f"{input_date} has been accepted.")
+                    return input_date
+            else:
+                print("Invalid date input. Please try again.")
+
+        except ValueError:
+            print("Invalid input.")
 #===================================================================================================
 
-def password_validation(prompt):
-    """Password must be 8 characters long and meet complexity criteria"""
+def basic_keyboard_input(prompt, is_password):
+    """Basic keyboard input validation:
+    True parameter is is password;
+    - 1 lowercase char
+    - 1 uppercase char
+    - 1 number
+    - special character
+    otherwise returns valid string"""
     while True:
-        try_password = input(prompt)
-        # The .fullmatch requires entire string to match the limits - 8 character length
-        if re.fullmatch(r'[A-Za-z0-9@#$%^&+=]{8,}', try_password):
-            # Must have one of each
-            upper = re.search("[^a-z]+",try_password)
-            lower = re.search("[^A-Z]+",try_password)
-            number = re.search("[^0-9]+",try_password)
-            special = re.search("[^@#$£%^&+=!]+",try_password)
-            if upper and lower and number and special:
-                return try_password
-        else:
-            print("""\nInvalid input.
-Please enter at least:
-one capital letter
-one lowercase letter
-one number
-one special character: @ # $ £ % ^ & + = !\n""")
+        try:
+            input_string = input(prompt)
+            # Basic keyboard character set
+            pattern = re.compile(r'^[a-zA-Z0-9 !"#$%&\'()*+,-./:;<=>?@^_`{|}~]+$')
+
+            if re.match(pattern, input_string):
+                if is_password:
+                    # Check password had 1 lowercase, 1 uppercase, 1 number and one special char
+                    # Must be 8 char or longer {8,}
+                    password_pattern = re.compile(r'(?=^.{8,}$)(?=.*?\d)(?=.*?[a-z])(?=.*?[A-Z])(?=.*?[^a-zA-Z\d])')
+                    if re.match(password_pattern, input_string):
+                        return input_string
+                    else:
+                        print("""\nDoes not meet password requirements. You need:
+                              8 characters minimum,
+                              1 lowercase character, 
+                              1 uppercase character, 
+                              1 numerical character, 
+                              1 special character\n""")
+                # Otherwise return basic character string
+                else:
+                    return input_string
+            else:
+                print("Input contains characters outside the basic keyboard set.")
+        except ValueError:
+            print("Input does not meet requirements.")
+
+# # Null check/Remove trailing whitespace
+# word = word.strip()
+# # If only whitespace was entered
+# if word == "":
+#     word = "null"
+# return word
 #===================================================================================================
 
 def task_file():
@@ -67,7 +97,7 @@ def task_file():
     if not os.path.exists("tasks.txt"):
         with open("tasks.txt", "w", encoding="utf-8") as default_task_file:
             #default_task_file.write("Task List")
-            default_task_file.write("admin;no-file;this is a default task file;2024-03-14;2024-02-21;No")
+            default_task_file.write("admin;no-file;this is a default task file;2054-03-14;2054-02-21;No")
 
     with open("tasks.txt", 'r', encoding="utf-8") as task_file:
         task_data = task_file.read().split("\n")
@@ -82,8 +112,8 @@ def task_file():
         curr_t['username'] = task_components[0]
         curr_t['title'] = task_components[1]
         curr_t['description'] = task_components[2]
-        curr_t['due_date'] = datetime.strptime(task_components[3], DATETIME_STRING_FORMAT)
-        curr_t['assigned_date'] = datetime.strptime(task_components[4], DATETIME_STRING_FORMAT)
+        curr_t['due_date'] = date_from_string(task_components[3])
+        curr_t['assigned_date'] = date_from_string(task_components[4])
         curr_t['completed'] = True if task_components[5] == "Yes" else False
         task_list.append(curr_t)
 
@@ -114,12 +144,12 @@ def user_log_in():
     while not logged_in:
 
         print("LOGIN")
-        curr_user = word_input("Username: ")
+        curr_user = basic_keyboard_input("Username: ", False)
         # Admin bypass password validation
         if curr_user == "admin":
             curr_pass = input("Admin Password: ")
         else:
-            curr_pass = password_validation("Password: ")
+            curr_pass = basic_keyboard_input("Password: ", True)
         if curr_user not in all_users_dict:
             print("User does not exist")
             continue
@@ -138,13 +168,13 @@ def reg_user(original_user_dict):
     while True:
         try:
             # - Request input of a new username
-            new_username = word_input("New Username: ")
+            new_username = basic_keyboard_input("New Username: ", False)
 
             # - Request input of a new password
-            new_password = password_validation("New Password: ")
+            new_password = basic_keyboard_input("New Password: ", True)
 
             # - Request input of password confirmation.
-            confirm_password = password_validation("Confirm Password: ")
+            confirm_password = basic_keyboard_input("Confirm Password: ", True)
 
             # - Check if user already exists in dictionary
             if new_username not in original_user_dict:
@@ -169,7 +199,7 @@ def reg_user(original_user_dict):
             print("Invalid input.")
 #===================================================================================================
 
-def add_task(username_password, main_task_list):
+def add_task(all_users_dict, main_task_list):
     '''Allow a user to add a new task.
         Prompt a user for the following: 
         - A username of the person whom the task is assigned to,
@@ -177,46 +207,40 @@ def add_task(username_password, main_task_list):
         - A description of the task and 
         - the due date of the task.'''
 
-    # Date object from todays date
-    curr_date = date.today()
-    # Cast to string as date() method cant compare to datetime()
-    string_date = date.isoformat(curr_date)
-    # Cast as date without time for datetime object comparison
-    curr_date = datetime.strptime(string_date, DATETIME_STRING_FORMAT)
-
     while True:
         try:
             # Assign to user if they exist
-            task_username = word_input("Name of person assigned to task: ")
-            if task_username not in username_password.keys():
+            task_username = basic_keyboard_input("Name of person assigned to task: ", False)
+
+            if task_username not in all_users_dict:
                 print("User does not exist. Please enter a valid username")
 
             else:
-                task_title = word_input("Title of Task: ")
-                task_description = word_input("Description of Task: ")
+                task_title = basic_keyboard_input("Title of Task: ", False)
+                task_description = basic_keyboard_input("Description of Task: ", False)
+                task_due_date = valid_due_date()
+                curr_date = date.today()
+                task_due_date = str(task_due_date)
+                curr_date = str(curr_date)
 
-                task_due_date = input("Due date of task (YYYY-MM-DD): ")
-
-                due_date_time = datetime.strptime(task_due_date, DATETIME_STRING_FORMAT)
-                # Due date validation
-                if due_date_time < curr_date:
-                    print("Must be due today or after todays date")
-                else:
-                    break
+                print(task_due_date)
+                print(curr_date)
+                # New task dict data format
+                new_task = {
+                    "username": task_username,
+                    "title": task_title,
+                    "description": task_description,
+                    "due_date": task_due_date,
+                    "assigned_date": curr_date,
+                    "completed": False # No
+                }
+                # Adds to tasks.txt file function
+                add_task_to_file(main_task_list, new_task)
+                return
 
         except ValueError:
-            print("Invalid datetime format. Please use the format specified")
-    # New task dict data format
-    new_task = {
-        "username": task_username,
-        "title": task_title,
-        "description": task_description,
-        "due_date": due_date_time, #due_date_time, adds 00:00:00 time stamp try string_date,
-        "assigned_date": curr_date,
-        "completed": False # No
-    }
-    # Adds to tasks.txt file function
-    add_task_to_file(main_task_list, new_task)
+            print("Invalid input.")
+
 #===================================================================================================
 
 def add_task_to_file(main_task_list, task):
@@ -231,15 +255,15 @@ def add_task_to_file(main_task_list, task):
                     t['username'],
                     t['title'],
                     t['description'],
-                    t['due_date'].strftime(DATETIME_STRING_FORMAT),
-                    t['assigned_date'].strftime(DATETIME_STRING_FORMAT),
+                    t['due_date'], #.strftime(DATETIME_STRING_FORMAT),
+                    t['assigned_date'], #.strftime(DATETIME_STRING_FORMAT),
                     "Yes" if t['completed'] else "No"
                 ]
                 task_list_to_write.append(";".join(str_attrs))
             add_task_file.write("\n".join(task_list_to_write))
         print("Task successfully added to file.")
     except ValueError:
-        print("Unable to add task")
+        print("Unable to add task.")
 #===================================================================================================
 
 def edit_task(original_task_list, curr_user):
@@ -338,6 +362,9 @@ def view_mine(all_tasks, curr_user):
 #===================================================================================================
 
 def user_menu():
+    path = os.path.realpath("tasks.txt")
+    print(path)
+    print(os.path.exists("tasks.txt"))
     """Main menu of choices for user"""
     # Main log in
     main_log_in = user_log_in() # returns curr_user [0] dict of all users [1]
