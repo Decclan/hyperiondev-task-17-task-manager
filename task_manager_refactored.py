@@ -11,6 +11,20 @@ import re
 from datetime import date
 from tabulate import tabulate
 
+def open_files():
+    """Check if required files exist otherwise create them"""
+    # If no user.txt file, write one with a default account
+    if not os.path.exists("user.txt"):
+        with open("user.txt", "w", encoding="utf-8") as default_user_file:
+            default_user_file.write("admin;password")
+
+    # Create tasks.txt if it doesn't exist
+    if not os.path.exists("tasks.txt"):
+        with open("tasks.txt", "w", encoding="utf-8") as default_task_file:
+            #default_task_file.write("Task List")
+            default_task_file.write("admin;no-file;this is a default task file;2154-03-14;2154-02-11;No")
+#===================================================================================================
+
 def date_from_string(string_date):
     """"Returns date object from string"""
     try:
@@ -21,6 +35,7 @@ def date_from_string(string_date):
         return date_object
     except ValueError:
         print("Date is invalid.")
+#===================================================================================================
 
 def valid_due_date():
     """Prompts user input due date string
@@ -45,7 +60,7 @@ def valid_due_date():
                 print("Invalid date input. Please try again.")
 
         except ValueError:
-            print("Invalid input.")
+            print("Invalid date.")
 #===================================================================================================
 
 def basic_keyboard_input(prompt, is_password):
@@ -92,13 +107,7 @@ def basic_keyboard_input(prompt, is_password):
 # return word
 #===================================================================================================
 
-def task_file():
-    """Create tasks.txt if it doesn't exist"""
-    if not os.path.exists("tasks.txt"):
-        with open("tasks.txt", "w", encoding="utf-8") as default_task_file:
-            #default_task_file.write("Task List")
-            default_task_file.write("admin;no-file;this is a default task file;2054-03-14;2054-02-21;No")
-
+def tasks_from_file():
     with open("tasks.txt", 'r', encoding="utf-8") as task_file:
         task_data = task_file.read().split("\n")
         task_data = [t for t in task_data if t != ""]
@@ -106,30 +115,23 @@ def task_file():
     task_list = []
     for t_str in task_data:
         curr_t = {}
-
         # Split by semicolon and manually add each component
         task_components = t_str.split(";")
         curr_t['username'] = task_components[0]
         curr_t['title'] = task_components[1]
         curr_t['description'] = task_components[2]
-        curr_t['due_date'] = date_from_string(task_components[3])
-        curr_t['assigned_date'] = date_from_string(task_components[4])
+        curr_t['due_date'] = task_components[3]#date_from_string(task_components[3])
+        curr_t['assigned_date'] = task_components[4]#date_from_string(task_components[4])
         curr_t['completed'] = True if task_components[5] == "Yes" else False
         task_list.append(curr_t)
 
     return task_list
-    # if deleted/file empty index error occurs
 #===================================================================================================
 
 def user_log_in():
     '''This code reads usernames and password from the user.txt file to 
         allow a user to login.
     '''
-    # If no user.txt file, write one with a default account
-    if not os.path.exists("user.txt"):
-        with open("user.txt", "w", encoding="utf-8") as default_user_file:
-            default_user_file.write("admin;password")
-
     # Read in user_data
     with open("user.txt", 'r', encoding="utf-8") as user_file:
         user_data = user_file.read().split("\n")
@@ -189,7 +191,7 @@ def reg_user(original_user_dict):
                         for k in original_user_dict:
                             new_user_data.append(f"{k};{original_user_dict[k]}")
                         out_file.write("\n".join(new_user_data))
-                    break
+                        return
                 # - Otherwise you present a relevant message and rerun if attempt fails.
                 else:
                     print("Passwords do no match.")
@@ -200,7 +202,7 @@ def reg_user(original_user_dict):
 #===================================================================================================
 
 def add_task(all_users_dict, main_task_list):
-    '''Allow a user to add a new task.
+    '''Allow a user create new task dictionary.
         Prompt a user for the following: 
         - A username of the person whom the task is assigned to,
         - A title of a task,
@@ -240,7 +242,6 @@ def add_task(all_users_dict, main_task_list):
 
         except ValueError:
             print("Invalid input.")
-
 #===================================================================================================
 
 def add_task_to_file(main_task_list, task):
@@ -261,17 +262,13 @@ def add_task_to_file(main_task_list, task):
                 ]
                 task_list_to_write.append(";".join(str_attrs))
             add_task_file.write("\n".join(task_list_to_write))
-        print("Task successfully added to file.")
+        print(f"Task: '{task}' was successfully added to the file.")
     except ValueError:
-        print("Unable to add task.")
+        print(f"Unable to add task: '{task}'.")
 #===================================================================================================
 
 def edit_task(original_task_list, curr_user):
     """Option to edit current user tasks"""
-    if not original_task_list:
-        print("Error: The list of dictionaries is empty.")
-        return
-
     while True:
         try:
             # Creates a list of curr_user tasks for editing
@@ -347,8 +344,9 @@ def edit_task(original_task_list, curr_user):
 def view_all(all_tasks):
     '''Reads all tasks from task.txt file and prints to the console
     '''
-    if all_tasks == "": # If task adding crashes, all tasks data is lost
-        print("No current tasks.")
+    if not all_tasks:
+        print("\nError: There are no tasks to display.")
+        return
     print(tabulate(all_tasks))
 #===================================================================================================
 
@@ -356,23 +354,96 @@ def view_mine(all_tasks, curr_user):
     '''Reads user tasks from task.txt file and prints to the console
     offers option to edit specific task by number and dictionary key
     '''
-    if all_tasks == "": # If task adding crashes, all tasks data is lost
-        print("No current tasks.")
+    if not all_tasks:
+        print("\nError: You dont have any tasks to display.")
+        return
+    # Shows curr_user tasks and offers to edit them
     edit_task(all_tasks, curr_user)
 #===================================================================================================
 
+def display_statistics():
+    pass
+#===================================================================================================
+
+def generate_reports(curr_tasks, all_users_dict):
+    """ task_overview
+        - number of tasks
+        - number of completed tasks
+        - number of uncompleted tasks
+        - number of uncompleted overdue tasks
+        - percentage of tasks that are incomplete
+        - percentage of tasks that are overdue
+    """
+    # If no user.txt file, write one with a default account
+    if not os.path.exists("task_overview.txt"):
+        with open("task_overview.txt", "w", encoding="utf-8") as default_task_file:
+            #default_task_file.write("example")
+            pass
+    
+    if curr_tasks == "":
+        print("No tasks to generate reports for.")
+    else:
+        try:
+            completed = 0
+            incomplete = 0
+            num_tasks = len(curr_tasks)
+            print(curr_tasks)
+            # curr_tasks is a list of dictionaries
+            # due_date_object = curr_tasks['due_date'][3]
+            # assigned_date_object = curr_tasks['assigned_date'][4]
+            # for task in curr_tasks:
+            #     if task in curr_tasks['completed'] == True:
+            #         completed += 1
+            #     elif task in curr_tasks['completed'] == False:
+            #         incomplete += 1
+
+            # user_tasks_dict = {
+            #     "total_number_of_tasks": num_tasks,
+            #     "completed_tasks": completed,
+            #     "uncompleted_tasks": incomplete,
+            #     # "overdue_incomplete_tasks": due_date_object,
+            #     # "percentage_tasks_incomplete": assigned_date_object,
+            #     "percentage_tasks_overdue": False # No
+            # }
+
+            #print(tabulate(user_tasks_dict))
+        except ValueError:
+            print("Unfortunately, something went wrong. Unable to generate reports.")
+
+    
+    
+
+
+
+    """ user_overview
+    - number of users
+    - number of tasks
+    for each user:
+    - number of tasks assigned
+    - percentage of the total tasks assigned to user
+    - percentage of assigned tasks completed
+    - percentage of uncompleted assigned tasks
+    - percentage of tasks uncompleted and overdue
+
+    """
+    if not os.path.exists("user_overview.txt"):
+        with open("user_overview.txt", "w", encoding="utf-8") as default_user_file:
+            #default_user_file.write("example")
+            pass
+    num_users = len(all_users_dict.keys())
+    pass
+
+#===================================================================================================
+
 def user_menu():
-    path = os.path.realpath("tasks.txt")
-    print(path)
-    print(os.path.exists("tasks.txt"))
     """Main menu of choices for user"""
-    # Main log in
+    open_files()
     main_log_in = user_log_in() # returns curr_user [0] dict of all users [1]
     curr_user = main_log_in[0]
     all_users_dict = main_log_in[1]
-    # Read or create list of dictionaries for all tasks from tasks.txt
-    curr_tasks = task_file()
-    # Main loop
+    # Create list of dictionaries for all tasks from tasks.txt
+    curr_tasks = tasks_from_file()
+    # Main menu loop
     while True:
         # presenting the menu to the user and
         # making sure that the user input is converted to lower case.
@@ -381,40 +452,42 @@ def user_menu():
     r - Registering a user
     a - Adding a task
     va - View all tasks
-    vm - View my task
+    vm - View my tasks
+    gr - Generate reports
     ds - Display statistics
     e - Exit
     : ''').lower()
 
         if menu == 'r':
             reg_user(all_users_dict)
-
         elif menu == 'a':
             add_task(all_users_dict, curr_tasks)
-
         elif menu == 'va':
             view_all(curr_tasks)
-
         elif menu == 'vm':
             view_mine(curr_tasks, curr_user)
-
+        elif menu == 'gr':
+            if curr_user == 'admin':
+                generate_reports(curr_tasks, all_users_dict)
+            else:
+                print("You do not have the required permissions to generate reports.")
         elif menu == 'ds':
             '''admin can display statistics about number of users and tasks.'''
             if curr_user == 'admin':
+                statistics_list = []
                 num_users = len(all_users_dict.keys())
                 num_tasks = len(curr_tasks)
+                statistics_list.append(f"no of users: {num_users}")
+                statistics_list.append(f"no of tasks: {num_tasks}")
+                statistics_list = " ".join(statistics_list)
 
-                print("-----------------------------------")
-                print(f"Number of users: \t\t {num_users}")
-                print(f"Number of tasks: \t\t {num_tasks}")
-                print("-----------------------------------")
+                print(tabulate(statistics_list))
+
             else:
                 print("You do not have the required permissions to view the statistics.")
-
         elif menu == 'e':
             print('Goodbye!!!')
             exit()
-
         else:
             print("You have made a wrong choice, Please Try again")
 #===================================================================================================
