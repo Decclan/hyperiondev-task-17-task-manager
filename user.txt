@@ -1,1 +1,4 @@
 admin;password
+user-one;Password$1
+user-two;Password$1
+user-three;Password$1

@@ -6,13 +6,14 @@
 # program will look in your root directory for the text files.
 
 """=========importing libraries========="""
+from ftplib import all_errors
 import os
 import re
 from datetime import date
 from tabulate import tabulate
 
 def open_files():
-    """Check if required files exist otherwise create them"""
+    """Check if main program required files exist otherwise create them"""
     # If no user.txt file, write one with a default account
     if not os.path.exists("user.txt"):
         with open("user.txt", "w", encoding="utf-8") as default_user_file:
@@ -58,7 +59,6 @@ def valid_due_date():
                     return input_date
             else:
                 print("Invalid date input. Please try again.")
-
         except ValueError:
             print("Invalid date.")
 #===================================================================================================
@@ -108,6 +108,7 @@ def basic_keyboard_input(prompt, is_password):
 #===================================================================================================
 
 def tasks_from_file():
+    """Reads tasks.txt, return list of task dictionaries"""
     with open("tasks.txt", 'r', encoding="utf-8") as task_file:
         task_data = task_file.read().split("\n")
         task_data = [t for t in task_data if t != ""]
@@ -129,13 +130,10 @@ def tasks_from_file():
 #===================================================================================================
 
 def user_log_in():
-    '''This code reads usernames and password from the user.txt file to 
-        allow a user to login.
-    '''
+    '''Reads usernames and passwords from the user.txt file to allow a user to login.'''
     # Read in user_data
     with open("user.txt", 'r', encoding="utf-8") as user_file:
         user_data = user_file.read().split("\n")
-
     # Convert to a dictionary
     all_users_dict = {}
     for user in user_data:
@@ -144,7 +142,6 @@ def user_log_in():
 
     logged_in = False
     while not logged_in:
-
         print("LOGIN")
         curr_user = basic_keyboard_input("Username: ", False)
         # Admin bypass password validation
@@ -171,13 +168,10 @@ def reg_user(original_user_dict):
         try:
             # - Request input of a new username
             new_username = basic_keyboard_input("New Username: ", False)
-
             # - Request input of a new password
             new_password = basic_keyboard_input("New Password: ", True)
-
             # - Request input of password confirmation.
             confirm_password = basic_keyboard_input("Confirm Password: ", True)
-
             # - Check if user already exists in dictionary
             if new_username not in original_user_dict:
                 # - Check if the new password and confirmed password are the same.
@@ -213,10 +207,8 @@ def add_task(all_users_dict, main_task_list):
         try:
             # Assign to user if they exist
             task_username = basic_keyboard_input("Name of person assigned to task: ", False)
-
             if task_username not in all_users_dict:
                 print("User does not exist. Please enter a valid username")
-
             else:
                 task_title = basic_keyboard_input("Title of Task: ", False)
                 task_description = basic_keyboard_input("Description of Task: ", False)
@@ -256,8 +248,8 @@ def add_task_to_file(main_task_list, task):
                     t['username'],
                     t['title'],
                     t['description'],
-                    t['due_date'], #.strftime(DATETIME_STRING_FORMAT),
-                    t['assigned_date'], #.strftime(DATETIME_STRING_FORMAT),
+                    t['due_date'],
+                    t['assigned_date'],
                     "Yes" if t['completed'] else "No"
                 ]
                 task_list_to_write.append(";".join(str_attrs))
@@ -316,7 +308,6 @@ def edit_task(original_task_list, curr_user):
 
                 # Option for user to assign task to another user - needs due date functionality
                 change_user_assigned = input("Would you like to assign this task to another user? y/n\n").lower()
-                change_due_date = input("Would you like to change this tasks due date? y/n\n").lower()
                 if change_user_assigned == "y":
                     key_to_edit = 'username'
                     new_value = input(f"Enter the new user to assign task '{index_to_edit}' to: ")
@@ -361,11 +352,20 @@ def view_mine(all_tasks, curr_user):
     edit_task(all_tasks, curr_user)
 #===================================================================================================
 
-def display_statistics():
-    pass
+def display_statistics(all_users_dict, curr_tasks):
+    """Admin display statistics menu option"""
+    statistics_list = []
+    num_users = len(all_users_dict.keys())
+    num_tasks = len(curr_tasks)
+    statistics_strings = [
+        f"Number of users: {num_users}",
+        f"Number of tasks: {num_tasks}"
+    ]
+    statistics_list.append("\n".join(statistics_strings))
+    print(tabulate([statistics_list]))
 #===================================================================================================
 
-def generate_reports(curr_tasks, all_users_dict):
+def generate_task_overview(curr_tasks):
     """ task_overview
         - number of tasks
         - number of completed tasks
@@ -374,47 +374,57 @@ def generate_reports(curr_tasks, all_users_dict):
         - percentage of tasks that are incomplete
         - percentage of tasks that are overdue
     """
-    # If no user.txt file, write one with a default account
+    # If no task_overview.txt file, create empty one
     if not os.path.exists("task_overview.txt"):
-        with open("task_overview.txt", "w", encoding="utf-8") as default_task_file:
-            #default_task_file.write("example")
+        with open("task_overview.txt", "w", encoding="utf-8"):
             pass
-    
     if curr_tasks == "":
         print("No tasks to generate reports for.")
+        return
     else:
         try:
             completed = 0
             incomplete = 0
+            overdue_incomplete = 0
             num_tasks = len(curr_tasks)
-            print(curr_tasks)
-            # curr_tasks is a list of dictionaries
-            # due_date_object = curr_tasks['due_date'][3]
-            # assigned_date_object = curr_tasks['assigned_date'][4]
-            # for task in curr_tasks:
-            #     if task in curr_tasks['completed'] == True:
-            #         completed += 1
-            #     elif task in curr_tasks['completed'] == False:
-            #         incomplete += 1
-
-            # user_tasks_dict = {
-            #     "total_number_of_tasks": num_tasks,
-            #     "completed_tasks": completed,
-            #     "uncompleted_tasks": incomplete,
-            #     # "overdue_incomplete_tasks": due_date_object,
-            #     # "percentage_tasks_incomplete": assigned_date_object,
-            #     "percentage_tasks_overdue": False # No
-            # }
-
-            #print(tabulate(user_tasks_dict))
+            # Generate statistics from task list
+            for task in curr_tasks:
+                if task['completed'] is True:
+                    completed += 1
+                elif task['completed'] is False:
+                    incomplete += 1
+                    if date_from_string(task['due_date']) <= date.today():
+                        overdue_incomplete +=1
+            percentage_incomplete = round(incomplete / num_tasks * 100, 2)
+            percentage_overdue = round(overdue_incomplete / num_tasks * 100, 2)
+            # Create dictionary of required values
+            tasks_overview_dict = {
+                "total_number_of_tasks": num_tasks,
+                "completed_tasks": completed,
+                "incomplete_tasks": incomplete,
+                "overdue_incomplete_tasks": overdue_incomplete,
+                "percentage_tasks_incomplete": percentage_incomplete,
+                "percentage_tasks_overdue": percentage_overdue # No
+            }
+            with open("task_overview.txt", "w", encoding="utf-8") as task_overview_file:
+                task_list_to_write =[]
+                str_attrs = [
+                    f"The total number of tasks: {tasks_overview_dict['total_number_of_tasks']}",
+                    f"The total number of completed tasks: {tasks_overview_dict['completed_tasks']}",
+                    f"The total number of incomplete tasks: {tasks_overview_dict['incomplete_tasks']}",
+                    f"The total number of overdue incomplete tasks: {tasks_overview_dict['overdue_incomplete_tasks']}",
+                    f"The percentage of incomplete tasks: {tasks_overview_dict['percentage_tasks_incomplete']}",
+                    f"The percentage of over due tasks: {tasks_overview_dict['percentage_tasks_overdue']}"
+                ]
+                task_list_to_write.append("\n".join(str_attrs))
+                task_overview_file.write("\n".join(task_list_to_write))
+                print(tabulate([task_list_to_write]))
+            print("Your task overview report has been successfully generated.")
+            return
         except ValueError:
-            print("Unfortunately, something went wrong. Unable to generate reports.")
+            print("Unfortunately, something went wrong. Unable to generate task overview reports.")
 
-    
-    
-
-
-
+def generate_user_overview(curr_tasks, all_users_dict):
     """ user_overview
     - number of users
     - number of tasks
@@ -424,14 +434,42 @@ def generate_reports(curr_tasks, all_users_dict):
     - percentage of assigned tasks completed
     - percentage of uncompleted assigned tasks
     - percentage of tasks uncompleted and overdue
-
     """
     if not os.path.exists("user_overview.txt"):
-        with open("user_overview.txt", "w", encoding="utf-8") as default_user_file:
+        with open("user_overview.txt", "w", encoding="utf-8"):
             #default_user_file.write("example")
             pass
-    num_users = len(all_users_dict.keys())
-    pass
+    if curr_tasks == "":
+        print("No tasks to generate reports for.")
+        return
+    else:
+        try:
+            num_users = len(all_users_dict)
+            num_tasks = len(curr_tasks)
+            task_counter = 0
+            # list_of_users = []
+            # list_of_users.append(all_users_dict.keys())
+            for key in all_users_dict.keys():
+                #for user in list_of_users:
+                if curr_tasks[0]['username'] == key:
+                    task_counter += 1
+
+            # Create dictionary of required values
+            users_overview_dict = {
+                "total_number_of_users": num_users,
+                "total_number_of_tasks": num_tasks,
+                #"username:": list_of_users,
+                #"task_username": task['username'],
+                "curr_task user": curr_tasks[0]['username'],
+                "tasks": task_counter
+                # "incomplete_tasks": incomplete,
+                # "overdue_incomplete_tasks": overdue_incomplete,
+                # "percentage_tasks_incomplete": percentage_incomplete,
+                # "percentage_tasks_overdue": percentage_overdue # No
+            }
+            print(users_overview_dict)
+        except ValueError:
+            print("Unfortunately, something went wrong. Unable to generate user overview reports.")
 
 #===================================================================================================
 
@@ -468,21 +506,13 @@ def user_menu():
             view_mine(curr_tasks, curr_user)
         elif menu == 'gr':
             if curr_user == 'admin':
-                generate_reports(curr_tasks, all_users_dict)
+                generate_task_overview(curr_tasks)
+                generate_user_overview(curr_tasks, all_users_dict)
             else:
                 print("You do not have the required permissions to generate reports.")
         elif menu == 'ds':
-            '''admin can display statistics about number of users and tasks.'''
             if curr_user == 'admin':
-                statistics_list = []
-                num_users = len(all_users_dict.keys())
-                num_tasks = len(curr_tasks)
-                statistics_list.append(f"no of users: {num_users}")
-                statistics_list.append(f"no of tasks: {num_tasks}")
-                statistics_list = " ".join(statistics_list)
-
-                print(tabulate(statistics_list))
-
+                display_statistics(all_users_dict, curr_tasks)
             else:
                 print("You do not have the required permissions to view the statistics.")
         elif menu == 'e':
