@@ -6,7 +6,6 @@
 # program will look in your root directory for the text files.
 
 """=========importing libraries========="""
-from ftplib import all_errors
 import os
 import re
 from datetime import date
@@ -86,11 +85,11 @@ def basic_keyboard_input(prompt, is_password):
                         return input_string
                     else:
                         print("""\nDoes not meet password requirements. You need:
-                              8 characters minimum,
-                              1 lowercase character, 
-                              1 uppercase character, 
-                              1 numerical character, 
-                              1 special character\n""")
+    8 characters minimum,
+    1 lowercase character, 
+    1 uppercase character, 
+    1 numerical character, 
+    1 special character\n""")
                 # Otherwise return basic character string
                 else:
                     return input_string
@@ -423,6 +422,7 @@ def generate_task_overview(curr_tasks):
             return
         except ValueError:
             print("Unfortunately, something went wrong. Unable to generate task overview reports.")
+#===================================================================================================
 
 def generate_user_overview(curr_tasks, all_users_dict):
     """ user_overview
@@ -437,7 +437,6 @@ def generate_user_overview(curr_tasks, all_users_dict):
     """
     if not os.path.exists("user_overview.txt"):
         with open("user_overview.txt", "w", encoding="utf-8"):
-            #default_user_file.write("example")
             pass
     if curr_tasks == "":
         print("No tasks to generate reports for.")
@@ -446,31 +445,79 @@ def generate_user_overview(curr_tasks, all_users_dict):
         try:
             num_users = len(all_users_dict)
             num_tasks = len(curr_tasks)
-            task_counter = 0
-            # list_of_users = []
-            # list_of_users.append(all_users_dict.keys())
-            for key in all_users_dict.keys():
-                #for user in list_of_users:
-                if curr_tasks[0]['username'] == key:
-                    task_counter += 1
 
-            # Create dictionary of required values
-            users_overview_dict = {
-                "total_number_of_users": num_users,
-                "total_number_of_tasks": num_tasks,
-                #"username:": list_of_users,
-                #"task_username": task['username'],
-                "curr_task user": curr_tasks[0]['username'],
-                "tasks": task_counter
-                # "incomplete_tasks": incomplete,
-                # "overdue_incomplete_tasks": overdue_incomplete,
-                # "percentage_tasks_incomplete": percentage_incomplete,
-                # "percentage_tasks_overdue": percentage_overdue # No
-            }
-            print(users_overview_dict)
+            # Create list of every user - avoids passwords for security
+            all_users_list = list(all_users_dict)
+            each_user_stats = []
+
+            # For every user in the users.txt
+            for user in all_users_list:
+                # Check number of tasks assigned
+                tasks_assigned = key_occurrences('username', user, curr_tasks)
+                tasks_completed = 0
+                need_completing = 0
+                overdue = 0
+                # Check how many tasks user has completed
+                for task in curr_tasks:
+                    if task['completed'] is True and user == task['username']:
+                        tasks_completed += 1
+                    elif task['completed'] is False and user == task['username']:
+                        if date_from_string(task['due_date']) > date.today():
+                            need_completing += 1
+                        else:
+                            overdue += 1
+
+                # Percentage calculations if not zero - avoids zero division error
+                if tasks_assigned != 0:
+                    percent_of_total = round(tasks_assigned / num_tasks * 100, 2)
+                    percent_completed = round(tasks_completed / tasks_assigned * 100, 2)
+                    percent_need_completing = round(need_completing / tasks_assigned * 100, 2)
+                    percent_overdue = round(overdue / tasks_assigned * 100, 2)
+                else:
+                    # Needs reassigning to avoid rogue values
+                    percent_of_total = 0
+                    percent_completed = 0
+                    percent_need_completing = 0
+                    percent_overdue = 0
+                # Individual user stats
+                user_tasks = {
+                    'user' : (user, tasks_assigned),
+                    'percent_of_total' : percent_of_total,
+                    'percent_completed' : percent_completed,
+                    'need_completing' : percent_need_completing,
+                    'overdue' : percent_overdue
+                }
+                each_user_stats.append(user_tasks)
+
+            with open("user_overview.txt", "w", encoding="utf-8") as task_overview_file:
+                task_list_to_write =[]
+                str_attrs = [
+                    f"The total number of users: {num_users}",
+                    f"The total number of tasks: {num_tasks}\n",
+                ]
+                for each_dict in each_user_stats:
+                    str_attrs.append(f"Total tasks assigned for user: {each_dict['user']}")
+                    str_attrs.append(f"Percent of total tasks assigned to user: {each_dict['percent_of_total']}")
+                    str_attrs.append(f"Percent of total assigned tasks completed: {each_dict['percent_completed']}")
+                    str_attrs.append(f"Percent of tasks that still need completing: {each_dict['need_completing']}")
+                    str_attrs.append(f"Percent of tasks that are incomplete and overdue: {each_dict['overdue']}\n")
+
+                task_list_to_write.append("\n".join(str_attrs))
+                task_overview_file.write("\n".join(task_list_to_write))
+                print(tabulate([task_list_to_write]))
+            print("Your user overview report has been successfully generated.")
+            return
         except ValueError:
             print("Unfortunately, something went wrong. Unable to generate user overview reports.")
+#===================================================================================================
 
+def key_occurrences(key, value, dictionary_list):
+    """Checks number of tasks fro each user for user overview"""
+    count = 0
+    for dictionary in dictionary_list:
+        if key in dictionary and dictionary[key] == value:
+            count += 1
+    return count
 #===================================================================================================
 
 def user_menu():

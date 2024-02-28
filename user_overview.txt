@@ -1,0 +1,26 @@
+The total number of users: 4
+The total number of tasks: 2
+
+Total tasks assigned for user: ('admin', 2)
+Percent of total tasks assigned to user: 100.0
+Percent of total assigned tasks completed: 0.0
+Percent of tasks that still need completing: 100.0
+Percent of tasks that are incomplete and overdue: 0.0
+
+Total tasks assigned for user: ('user-one', 0)
+Percent of total tasks assigned to user: 0
+Percent of total assigned tasks completed: 0
+Percent of tasks that still need completing: 0
+Percent of tasks that are incomplete and overdue: 0
+
+Total tasks assigned for user: ('user-two', 0)
+Percent of total tasks assigned to user: 0
+Percent of total assigned tasks completed: 0
+Percent of tasks that still need completing: 0
+Percent of tasks that are incomplete and overdue: 0
+
+Total tasks assigned for user: ('user-three', 0)
+Percent of total tasks assigned to user: 0
+Percent of total assigned tasks completed: 0
+Percent of tasks that still need completing: 0
+Percent of tasks that are incomplete and overdue: 0
