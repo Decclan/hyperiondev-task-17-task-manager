@@ -50,7 +50,6 @@ def valid_due_date():
                 input_date = list(map(lambda x: int(x), input_date))
                 # Creates date object from string for comparison
                 input_date = date(input_date[0], input_date[1], input_date[2])
-
                 if input_date < date.today():
                     print("Sorry, this date has passed.")
                 else:
@@ -120,8 +119,8 @@ def tasks_from_file():
         curr_t['username'] = task_components[0]
         curr_t['title'] = task_components[1]
         curr_t['description'] = task_components[2]
-        curr_t['due_date'] = task_components[3]#date_from_string(task_components[3])
-        curr_t['assigned_date'] = task_components[4]#date_from_string(task_components[4])
+        curr_t['due_date'] = task_components[3]
+        curr_t['assigned_date'] = task_components[4]
         curr_t['completed'] = True if task_components[5] == "Yes" else False
         task_list.append(curr_t)
 
@@ -253,9 +252,9 @@ def add_task_to_file(main_task_list, task):
                 ]
                 task_list_to_write.append(";".join(str_attrs))
             add_task_file.write("\n".join(task_list_to_write))
-        print(f"Task: '{task}' was successfully added to the file.")
+        print(f"\nTask was successfully added to the file.\n'{tabulate([task])}'\n")
     except ValueError:
-        print(f"Unable to add task: '{task}'.")
+        print(f"\nUnable to add this task:\n'{tabulate([task])}'\n")
 #===================================================================================================
 
 def edit_task(original_task_list, curr_user):
@@ -305,24 +304,44 @@ def edit_task(original_task_list, curr_user):
                 selected_dict['completed'] = False
                 print(tabulate([selected_dict]))
 
-                # Option for user to assign task to another user - needs due date functionality
+                # Option for user to assign task to another user
                 change_user_assigned = input("Would you like to assign this task to another user? y/n\n").lower()
                 if change_user_assigned == "y":
                     key_to_edit = 'username'
-                    new_value = input(f"Enter the new user to assign task '{index_to_edit}' to: ")
+                    new_user_value = input(f"Enter the new user to assign task '{index_to_edit}' to: ")
 
                     for key_in_dict in selected_dict.keys():
                         if key_to_edit == key_in_dict:
-                            selected_dict[key_to_edit] = new_value
-                            print(f"Successfully assigned the task to {new_value}.")
+                            selected_dict[key_to_edit] = new_user_value
+                            print(f"Successfully assigned the task to: {new_user_value}.")
 
-                    print(f"\nDictionary updated:\n{tabulate([selected_dict])}")
+                    print(f"\nTask updated:\n{tabulate([selected_dict])}")
                     add_task_to_file(original_task_list, selected_dict)
-                    return # Redundant?
+                    #return
                 elif change_user_assigned == "n":
-                    print(f"\nYou remain assigned to this task. Dictionary updated:\n{tabulate([selected_dict])}")
+                    print(f"\nYou remain assigned to this task. Task updated:\n{tabulate([selected_dict])}")
                     add_task_to_file(original_task_list, selected_dict)
-                    break # Redundant?
+                    #break
+                else:
+                    print("Invalid option. Changes have not been saved.")
+                # Option to change the due date of the task
+                change_due_date = input("Would you like to change the due date of this task? y/n\n").lower()
+                if change_due_date == "y":
+                    key_to_edit = 'due_date'
+                    new_date_value = str(valid_due_date())
+
+                    for key_in_dict in selected_dict.keys():
+                        if key_to_edit == key_in_dict:
+                            selected_dict[key_to_edit] = new_date_value
+                            print(f"Successfully changed the due date to: {new_date_value}.")
+                    
+                    print(f"\nTask updated:\n{tabulate([selected_dict])}")
+                    add_task_to_file(original_task_list, selected_dict)
+                    return
+                elif change_user_assigned == "n":
+                    print(f"\nThe due date remains the same. Task updated:\n{tabulate([selected_dict])}")
+                    add_task_to_file(original_task_list, selected_dict)
+                    break
                 else:
                     print("Invalid option. Changes have not been saved.")
             else:
